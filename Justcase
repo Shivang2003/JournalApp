@@ -1,0 +1,178 @@
+import os
+from pathlib import Path
+import json
+import yaml
+from langchain_ollama import OllamaLLM, OllamaEmbeddings
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+import ast
+
+# -----------------------------
+# CONFIG
+# -----------------------------
+DATA_FOLDER = "data/doc2"
+OUTPUT_JSON = "virtual_dir.json"
+OUTPUT_YAML = "virtual_dir.yaml"
+MAIN_TOPIC = "OAuth"
+
+# -----------------------------
+# STEP 1: Read Documents
+# -----------------------------
+def read_documents(folder_path):
+    folder = Path(folder_path)
+    all_docs = []
+
+    for file in folder.glob("*.txt"):
+        try:
+            content = file.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            # fallback if file is weirdly encoded
+            content = file.read_text(encoding="latin-1")
+
+        print("file read:", file.stem)
+
+        all_docs.append({
+            "id": file.stem,
+            "title": file.stem,
+            "content": content
+        })
+
+    return all_docs
+
+# -----------------------------
+# STEP 2: Generate Subtopics via LLM
+# -----------------------------
+def generate_subtopics_llm(docs, main_topic):
+    llm = OllamaLLM(model="llama3:8b")
+    # Use correct keys from docs
+    all_text = "\n\n".join([f"{doc['title']}: {doc['content'][:150]}..." for doc in docs])
+
+    prompt = f"""
+You are given several documents all about the same main topic: {main_topic}.
+Read the documents and generate a list of meaningful subtopics for organizing them.
+Return only a JSON list of subtopic names (e.g., ["Subtopic1", "Subtopic2"]).
+Documents:
+{all_text}
+"""
+    prompt += "\n\nImportant: Output must be a valid JSON list. No extra text."
+    response = llm.invoke(prompt)
+
+    # --- Parse JSON or stringified list ---
+    try:
+        subtopics = json.loads(response)
+    except json.JSONDecodeError:
+        try:
+            subtopics = ast.literal_eval(response)
+        except Exception:
+            subtopics = [line.strip().strip('"').strip(',') for line in response.splitlines() if line.strip()]
+
+    # Clean subtopics: remove extra quotes and unwanted lines
+    cleaned_subtopics = []
+    for s in subtopics:
+        s_clean = s.strip().strip('"').strip("'")
+        if s_clean and s_clean not in ['[', ']'] and not s_clean.lower().startswith('after reading') and not s_clean.lower().startswith('note'):
+            cleaned_subtopics.append(s_clean)
+
+    return cleaned_subtopics
+
+# -----------------------------
+# STEP 3: Assign Docs to Subtopics
+# -----------------------------
+def assign_docs_to_subtopics(docs, subtopics):
+    embedding_model = OllamaEmbeddings(model="nomic-embed-text")
+
+    # Compute embeddings
+    subtopic_embeddings = [embedding_model.embed_query(s) for s in subtopics]
+    doc_embeddings = [embedding_model.embed_query(d["content"]) for d in docs]
+
+    # Track sources
+    subtopic_sources = {sub: set() for sub in subtopics}
+
+    # Assign each document to most similar subtopic
+    for i, doc in enumerate(docs):
+        sims = cosine_similarity([doc_embeddings[i]], subtopic_embeddings)[0]
+        best_idx = np.argmax(sims)
+        doc_subtopic = subtopics[best_idx].strip()
+        doc["subtopic"] = doc_subtopic
+        subtopic_sources[doc_subtopic].add(doc["id"])
+
+    return docs, subtopic_sources
+
+# -----------------------------
+# STEP 4: Build Virtual Directory (with sources & documents)
+# -----------------------------
+def build_virtual_directory(docs, main_topic, subtopics, subtopic_sources):
+    virtual_dir = {main_topic: {}}
+
+    for sub in subtopics:
+        virtual_dir[main_topic][sub] = {
+            "sources": list(subtopic_sources.get(sub, [])),
+            "documents": []
+        }
+
+    for doc in docs:
+        sub = doc.get("subtopic")
+        if sub and sub in virtual_dir[main_topic]:
+            virtual_dir[main_topic][sub]["documents"].append({
+                "id": doc["id"],
+                "title": doc["title"],
+                "content": doc["content"]
+            })
+        else:
+            # uncategorized docs
+            if "Uncategorized" not in virtual_dir[main_topic]:
+                virtual_dir[main_topic]["Uncategorized"] = {"sources": [], "documents": []}
+            virtual_dir[main_topic]["Uncategorized"]["documents"].append({
+                "id": doc["id"],
+                "title": doc["title"],
+                "content": doc["content"]
+            })
+
+    return virtual_dir
+
+def getSubTopicData(docs, subtopics):
+    for sub in subtopics:
+        print (f"Subtopic: {sub}")
+        print("LLM working to get related info for subtopic...")
+        llm = OllamaLLM(model="llama3:8b")
+        prompt = f"""You are given a subtopic: {sub}.
+Based on the documents provided, list key points or insights related to this subtopic.
+Documents:
+"""
+        for doc in docs:
+            prompt += doc["content"][:200] + "...\n"
+
+        response = llm.invoke(prompt)
+        print(f"Key points for {sub}:\n{response}\n")
+
+
+# -----------------------------
+# MAIN PIPELINE
+# -----------------------------
+if __name__ == "__main__":
+    print("Reading documents...")
+    all_docs = read_documents(DATA_FOLDER)
+
+    print("Generating subtopics via LLaMA...")
+    subtopics = generate_subtopics_llm(all_docs, MAIN_TOPIC)
+    print("Subtopics generated:", subtopics)
+
+    getSubTopicData(all_docs, subtopics)
+
+    print("Assigning documents to subtopics...")
+    all_docs, subtopic_sources = assign_docs_to_subtopics(all_docs, subtopics)
+
+    print("Building virtual directory...")
+    virtual_dir = build_virtual_directory(all_docs, MAIN_TOPIC, subtopics, subtopic_sources)
+
+    # --- Save as JSON ---
+    print("Saving virtual directory to JSON...")
+    with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
+        json.dump(virtual_dir, f, ensure_ascii=False, indent=4)
+
+    # --- Save as YAML ---
+    print("Saving virtual directory to YAML...")
+    with open(OUTPUT_YAML, "w", encoding="utf-8") as f:
+        yaml.dump(virtual_dir, f, allow_unicode=True)
+
+    print(f"✅ Virtual directory saved as {OUTPUT_JSON} and {OUTPUT_YAML}")
