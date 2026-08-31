@@ -2,15 +2,17 @@ package net.springproject.journalApp.controller;
 
 import net.springproject.journalApp.entity.JournalEntry;
 import net.springproject.journalApp.entity.User;
+import net.springproject.journalApp.repository.UserRepository;
 import net.springproject.journalApp.service.JournalEntryService;
 import net.springproject.journalApp.service.UserService;
+import org.springframework.security.core.Authentication;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +23,9 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @GetMapping
     public ResponseEntity<List<User>> getUsers(){
         try{
@@ -30,20 +35,11 @@ public class UserController {
         }
     }
 
-    @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User newUser){
+    @PutMapping
+    public ResponseEntity<User> updateUser(@RequestBody User updatedUser){
         try{
-            userService.saveUser(newUser);
-            return new ResponseEntity<>(newUser,HttpStatus.CREATED);
-        }
-        catch (Exception e){
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    @PutMapping("/{userName}")
-    public ResponseEntity<User> updateUser(@PathVariable String userName, @RequestBody User updatedUser){
-        try{
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userName = authentication.getName();
             User userInDb = userService.findByUserName(userName);
             if(userInDb!=null){
                 userInDb.setUserName(updatedUser.getUserName());
@@ -55,6 +51,14 @@ public class UserController {
         catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+    }
+
+    @DeleteMapping("/user")
+    public ResponseEntity<?> deleteUser(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
+        userRepository.deleteByUserName(userName);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
 }
