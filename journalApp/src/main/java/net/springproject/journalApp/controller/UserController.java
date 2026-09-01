@@ -44,7 +44,7 @@ public class UserController {
             if(userInDb!=null){
                 userInDb.setUserName(updatedUser.getUserName());
                 userInDb.setPassword(updatedUser.getPassword());
-                userService.saveUser(userInDb);
+                userService.saveNewUser(userInDb);
             }
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
