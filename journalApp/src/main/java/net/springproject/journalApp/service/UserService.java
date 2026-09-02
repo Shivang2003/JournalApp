@@ -1,10 +1,13 @@
 package net.springproject.journalApp.service;
 
+import lombok.extern.slf4j.Slf4j;
 import net.springproject.journalApp.entity.JournalEntry;
 import net.springproject.journalApp.entity.User;
 import net.springproject.journalApp.repository.JournalEntryRepository;
 import net.springproject.journalApp.repository.UserRepository;
 import org.bson.types.ObjectId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -17,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
+@Slf4j
 public class UserService {
 
     @Autowired
@@ -29,9 +33,16 @@ public class UserService {
     }
 
     public void saveNewUser(User user) {
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRoles(Arrays.asList("USER"));
-        userRepository.save(user);
+        try{
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+            user.setRoles(Arrays.asList("USER"));
+            userRepository.save(user);
+            log.info("New user saved: {}", user.getUserName());
+        }
+        catch (Exception e){
+            log.error("Error saving new user: {}", e.getMessage());
+            throw new RuntimeException("Error saving new user: " + user.getUserName(), e);
+        }
     }
 
     public List<User> getAll(){
