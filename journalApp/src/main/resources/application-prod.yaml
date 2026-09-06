@@ -3,8 +3,17 @@ spring:
     name: journalApp
   data:
     mongodb:
-      uri:
+      uri: wlknefjksbkdf
       database: journaldb
       auto-index-creation: true
 server:
   port: 8080
+logging:
+  level:
+    net:
+      springproject:
+        journalApp: DEBUG
+
+api:
+  key:
+    weather: SKDLbfhjkladsbkj

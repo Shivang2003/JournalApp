@@ -1,10 +1,12 @@
 package net.springproject.journalApp.controller;
 
+import net.springproject.journalApp.entity.CurrentWeather;
 import net.springproject.journalApp.entity.JournalEntry;
 import net.springproject.journalApp.entity.User;
 import net.springproject.journalApp.repository.UserRepository;
 import net.springproject.journalApp.service.JournalEntryService;
 import net.springproject.journalApp.service.UserService;
+import org.springframework.data.repository.query.Param;
 import org.springframework.security.core.Authentication;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +29,9 @@ public class UserController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private RestTemplate restTemplate;
 
     @GetMapping
     public ResponseEntity<List<User>> getUsers(){
@@ -59,6 +66,18 @@ public class UserController {
         String userName = authentication.getName();
         userRepository.deleteByUserName(userName);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @PostMapping("/weather-info/{city}")
+    public ResponseEntity<?> getWeatherInfo(@PathVariable("city") String city){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
+
+        CurrentWeather currentWeather = userService.getCurrentWeather(city);
+        if(currentWeather==null){
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<>(currentWeather, HttpStatus.OK);
     }
 
 }

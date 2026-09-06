@@ -13,6 +13,8 @@ logging:
     net:
       springproject:
         journalApp: DEBUG
+
+
 #logging:
 #  level:
 #    root: off
