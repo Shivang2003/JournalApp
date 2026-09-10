@@ -13,7 +13,9 @@ logging:
     net:
       springproject:
         journalApp: DEBUG
-
+api:
+  key:
+    weather:
 
 #logging:
 #  level:
