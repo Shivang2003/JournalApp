@@ -27,7 +27,7 @@ public class UserScheduler {
     @Autowired
     SentimentAnalysisService sentimentAnalysisService;
 
-    @Scheduled(cron = "*/5 * * * * *")
+    @Scheduled(cron = "0 0 * * * *")
     public void sendMialToUsers(){
         try{
             List<User> users = userRepositoryImpl.getUserForSA();
@@ -46,7 +46,7 @@ public class UserScheduler {
                         maxSentiment = entry.getKey();
                     }
                 }
-                emailService.sendEmail("l@gmail.com", "SentimentAnalysis", "You were feeling " + maxSentiment + " in the last 7 days");
+                emailService.sendEmail("lol2003olo@gmail.com", "SentimentAnalysis", "You were feeling " + maxSentiment + " in the last 7 days");
             }
         }
         catch (Exception e){

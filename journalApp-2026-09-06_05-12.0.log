@@ -1,0 +1,3 @@
+2026-09-06 05:12:45 [http-nio-8080-exec-1] ERROR n.s.journalApp.service.UserService - Error fetching current weather for city Ghaziabad: Type definition error: [simple type, class net.springproject.journalApp.entity.CurrentWeather$Request]
+2026-09-06 05:12:45 [SpringApplicationShutdownHook] INFO  o.s.b.w.e.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-09-06 05:12:45 [tomcat-shutdown] INFO  o.s.b.w.e.tomcat.GracefulShutdown - Graceful shutdown complete

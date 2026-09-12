@@ -1,0 +1,1 @@
+2026-09-06 05:11:05 [http-nio-8080-exec-2] ERROR n.s.journalApp.service.UserService - Error fetching current weather for city Ghaziabad: Type definition error: [simple type, class net.springproject.journalApp.entity.CurrentWeather$Request]

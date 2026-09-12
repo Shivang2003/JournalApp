@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.client.RestTemplate;
 
@@ -25,7 +26,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-@Component
+@Service
 @Slf4j
 public class UserService {
 
@@ -74,18 +75,6 @@ public class UserService {
 
     public User findByUserName(String userName){
         return userRepository.findByUserName(userName);
-    }
-
-    public CurrentWeather getCurrentWeather(String cityName) {
-        try {
-            String getCurrentWeatherUrl = "https://api.weatherstack.com/current?access_key=" + appCache.API_KEYS_CACHE.get("weather_key") + "&query=" + cityName;
-            ResponseEntity<CurrentWeather> response = restTemplate.exchange(getCurrentWeatherUrl, HttpMethod.GET, null, CurrentWeather.class);
-            CurrentWeather currentWeather = response.getBody();
-            return currentWeather;
-        } catch (Exception e) {
-            log.error("Error fetching current weather for city {}: {}", cityName, e.getMessage());
-        }
-        return null;
     }
 
 }

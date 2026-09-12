@@ -1,4 +1,7 @@
 spring:
+  redis:
+    host: localhost
+    port: 6379
   application:
     name: journalApp
   data:
@@ -13,10 +16,10 @@ logging:
     net:
       springproject:
         journalApp: DEBUG
+
 api:
   key:
     weather:
-
 #logging:
 #  level:
 #    root: off
